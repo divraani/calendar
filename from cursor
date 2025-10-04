@@ -1,0 +1,281 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+from datetime import datetime, timedelta
+import json
+import os
+
+class CalendarApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Calendar App")
+        self.root.geometry("800x600")
+        self.root.configure(bg='#f0f0f0')
+        
+        # Current date tracking
+        self.current_date = datetime.now()
+        self.events_file = "events.json"
+        self.events = self.load_events()
+        
+        # Create GUI
+        self.create_widgets()
+        self.update_calendar()
+        
+    def create_widgets(self):
+        # Title frame
+        title_frame = tk.Frame(self.root, bg='#f0f0f0')
+        title_frame.pack(fill='x', padx=10, pady=5)
+        
+        # Navigation buttons
+        nav_frame = tk.Frame(title_frame, bg='#f0f0f0')
+        nav_frame.pack()
+        
+        self.prev_btn = tk.Button(nav_frame, text="◀", command=self.prev_month, 
+                                 bg='#4CAF50', fg='white', font=('Arial', 12, 'bold'))
+        self.prev_btn.pack(side='left', padx=5)
+        
+        self.month_year_label = tk.Label(nav_frame, text="", font=('Arial', 16, 'bold'), 
+                                        bg='#f0f0f0')
+        self.month_year_label.pack(side='left', padx=20)
+        
+        self.next_btn = tk.Button(nav_frame, text="▶", command=self.next_month, 
+                                 bg='#4CAF50', fg='white', font=('Arial', 12, 'bold'))
+        self.next_btn.pack(side='left', padx=5)
+        
+        # Today button
+        self.today_btn = tk.Button(nav_frame, text="Today", command=self.go_to_today, 
+                                  bg='#2196F3', fg='white', font=('Arial', 10))
+        self.today_btn.pack(side='right', padx=5)
+        
+        # Calendar frame
+        self.calendar_frame = tk.Frame(self.root, bg='#f0f0f0')
+        self.calendar_frame.pack(fill='both', expand=True, padx=10, pady=5)
+        
+        # Days of week header
+        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        for i, day in enumerate(days):
+            label = tk.Label(self.calendar_frame, text=day, font=('Arial', 10, 'bold'), 
+                           bg='#e0e0e0', width=10, height=2)
+            label.grid(row=0, column=i, padx=1, pady=1, sticky='nsew')
+        
+        # Configure grid weights
+        for i in range(7):
+            self.calendar_frame.grid_columnconfigure(i, weight=1)
+        
+        # Event management frame
+        event_frame = tk.Frame(self.root, bg='#f0f0f0')
+        event_frame.pack(fill='x', padx=10, pady=5)
+        
+        tk.Label(event_frame, text="Event Management", font=('Arial', 12, 'bold'), 
+                bg='#f0f0f0').pack(anchor='w')
+        
+        # Event input frame
+        input_frame = tk.Frame(event_frame, bg='#f0f0f0')
+        input_frame.pack(fill='x', pady=5)
+        
+        tk.Label(input_frame, text="Date:", bg='#f0f0f0').pack(side='left')
+        self.date_var = tk.StringVar()
+        self.date_entry = tk.Entry(input_frame, textvariable=self.date_var, width=12)
+        self.date_entry.pack(side='left', padx=5)
+        
+        tk.Label(input_frame, text="Event:", bg='#f0f0f0').pack(side='left', padx=(10,0))
+        self.event_var = tk.StringVar()
+        self.event_entry = tk.Entry(input_frame, textvariable=self.event_var, width=30)
+        self.event_entry.pack(side='left', padx=5)
+        
+        self.add_event_btn = tk.Button(input_frame, text="Add Event", command=self.add_event, 
+                                      bg='#FF9800', fg='white')
+        self.add_event_btn.pack(side='left', padx=5)
+        
+        # Events list
+        self.events_listbox = tk.Listbox(event_frame, height=6, font=('Arial', 9))
+        self.events_listbox.pack(fill='x', pady=5)
+        
+        # Delete event button
+        self.delete_event_btn = tk.Button(event_frame, text="Delete Selected Event", 
+                                         command=self.delete_event, bg='#f44336', fg='white')
+        self.delete_event_btn.pack(anchor='w')
+        
+    def load_events(self):
+        """Load events from JSON file"""
+        if os.path.exists(self.events_file):
+            try:
+                with open(self.events_file, 'r') as f:
+                    return json.load(f)
+            except:
+                return {}
+        return {}
+    
+    def save_events(self):
+        """Save events to JSON file"""
+        with open(self.events_file, 'w') as f:
+            json.dump(self.events, f, indent=2)
+    
+    def update_calendar(self):
+        """Update the calendar display"""
+        # Clear existing calendar
+        for widget in self.calendar_frame.winfo_children():
+            if isinstance(widget, tk.Button):
+                widget.destroy()
+        
+        # Update month/year label
+        month_year = self.current_date.strftime("%B %Y")
+        self.month_year_label.config(text=month_year)
+        
+        # Get first day of month and number of days
+        first_day = self.current_date.replace(day=1)
+        days_in_month = (first_day.replace(month=first_day.month % 12 + 1, day=1) - 
+                        timedelta(days=1)).day
+        
+        # Calculate starting position (Monday = 0)
+        start_pos = (first_day.weekday() + 1) % 7
+        
+        # Create calendar buttons
+        row = 1
+        col = 0
+        
+        # Previous month days
+        prev_month = first_day - timedelta(days=1)
+        prev_days = prev_month.day
+        for i in range(start_pos):
+            day_num = prev_days - start_pos + i + 1
+            btn = tk.Button(self.calendar_frame, text=str(day_num), 
+                           bg='#e0e0e0', fg='gray', width=10, height=2,
+                           command=lambda d=day_num: self.select_date(d, 'prev'))
+            btn.grid(row=row, column=col, padx=1, pady=1, sticky='nsew')
+            col += 1
+        
+        # Current month days
+        for day in range(1, days_in_month + 1):
+            date_str = f"{self.current_date.year}-{self.current_date.month:02d}-{day:02d}"
+            is_today = (self.current_date.year == datetime.now().year and 
+                       self.current_date.month == datetime.now().month and 
+                       day == datetime.now().day)
+            
+            # Check if date has events
+            has_events = date_str in self.events
+            
+            btn_color = '#4CAF50' if is_today else '#ffffff'
+            if has_events:
+                btn_color = '#FFC107'
+            
+            btn = tk.Button(self.calendar_frame, text=str(day), 
+                           bg=btn_color, fg='black' if is_today else 'black',
+                           width=10, height=2, font=('Arial', 10, 'bold' if is_today else 'normal'),
+                           command=lambda d=day: self.select_date(d, 'current'))
+            btn.grid(row=row, column=col, padx=1, pady=1, sticky='nsew')
+            
+            col += 1
+            if col == 7:
+                col = 0
+                row += 1
+        
+        # Next month days
+        next_day = 1
+        while col < 7:
+            btn = tk.Button(self.calendar_frame, text=str(next_day), 
+                           bg='#e0e0e0', fg='gray', width=10, height=2,
+                           command=lambda d=next_day: self.select_date(d, 'next'))
+            btn.grid(row=row, column=col, padx=1, pady=1, sticky='nsew')
+            col += 1
+            next_day += 1
+        
+        # Update events list
+        self.update_events_list()
+    
+    def select_date(self, day, month_type):
+        """Handle date selection"""
+        if month_type == 'current':
+            date_str = f"{self.current_date.year}-{self.current_date.month:02d}-{day:02d}"
+        elif month_type == 'prev':
+            prev_month = self.current_date.replace(month=self.current_date.month - 1) if self.current_date.month > 1 else self.current_date.replace(year=self.current_date.year - 1, month=12)
+            date_str = f"{prev_month.year}-{prev_month.month:02d}-{day:02d}"
+        else:  # next
+            next_month = self.current_date.replace(month=self.current_date.month + 1) if self.current_date.month < 12 else self.current_date.replace(year=self.current_date.year + 1, month=1)
+            date_str = f"{next_month.year}-{next_month.month:02d}-{day:02d}"
+        
+        self.date_var.set(date_str)
+        self.update_events_list()
+    
+    def prev_month(self):
+        """Go to previous month"""
+        if self.current_date.month == 1:
+            self.current_date = self.current_date.replace(year=self.current_date.year - 1, month=12)
+        else:
+            self.current_date = self.current_date.replace(month=self.current_date.month - 1)
+        self.update_calendar()
+    
+    def next_month(self):
+        """Go to next month"""
+        if self.current_date.month == 12:
+            self.current_date = self.current_date.replace(year=self.current_date.year + 1, month=1)
+        else:
+            self.current_date = self.current_date.replace(month=self.current_date.month + 1)
+        self.update_calendar()
+    
+    def go_to_today(self):
+        """Go to current month"""
+        self.current_date = datetime.now()
+        self.update_calendar()
+    
+    def add_event(self):
+        """Add a new event"""
+        date_str = self.date_var.get().strip()
+        event_text = self.event_var.get().strip()
+        
+        if not date_str or not event_text:
+            messagebox.showwarning("Warning", "Please enter both date and event!")
+            return
+        
+        # Validate date format
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter date in YYYY-MM-DD format!")
+            return
+        
+        if date_str not in self.events:
+            self.events[date_str] = []
+        
+        self.events[date_str].append(event_text)
+        self.save_events()
+        self.event_var.set("")
+        self.update_calendar()
+        self.update_events_list()
+        messagebox.showinfo("Success", "Event added successfully!")
+    
+    def delete_event(self):
+        """Delete selected event"""
+        selection = self.events_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Warning", "Please select an event to delete!")
+            return
+        
+        selected_text = self.events_listbox.get(selection[0])
+        date_str = self.date_var.get().strip()
+        
+        if date_str in self.events:
+            if selected_text in self.events[date_str]:
+                self.events[date_str].remove(selected_text)
+                if not self.events[date_str]:  # Remove date if no events left
+                    del self.events[date_str]
+                self.save_events()
+                self.update_calendar()
+                self.update_events_list()
+                messagebox.showinfo("Success", "Event deleted successfully!")
+    
+    def update_events_list(self):
+        """Update the events listbox"""
+        self.events_listbox.delete(0, tk.END)
+        date_str = self.date_var.get().strip()
+        
+        if date_str and date_str in self.events:
+            for event in self.events[date_str]:
+                self.events_listbox.insert(tk.END, event)
+
+def main():
+    root = tk.Tk()
+    app = CalendarApp(root)
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
