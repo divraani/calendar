@@ -1,0 +1,395 @@
+import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
+
+void main() {
+  runApp(CalendarApp());
+}
+
+class CalendarApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'UCSC Timeline Calendar',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: CalendarScreen(),
+    );
+  }
+}
+
+// Event class
+class Event {
+  String name;
+  DateTime time;
+  int durationHours;
+  String repeat;
+  String calendar;
+
+  Event({
+    required this.name,
+    required this.time,
+    this.durationHours = 1,
+    this.repeat = 'None',
+    this.calendar = 'Personal',
+  });
+
+  Event copyWith({DateTime? time}) {
+    return Event(
+      name: this.name,
+      time: time ?? this.time,
+      durationHours: this.durationHours,
+      repeat: this.repeat,
+      calendar: this.calendar,
+    );
+  }
+}
+
+class CalendarScreen extends StatefulWidget {
+  @override
+  _CalendarScreenState createState() => _CalendarScreenState();
+}
+
+class _CalendarScreenState extends State<CalendarScreen> {
+  CalendarFormat _calendarFormat = CalendarFormat.month;
+  DateTime _selectedDay = DateTime.now();
+  DateTime _focusedDay = DateTime.now();
+
+  final TextEditingController _eventController = TextEditingController();
+  final TextEditingController _durationController = TextEditingController();
+
+  // Multi-calendar
+  Map<String, Map<String, List<Event>>> _calendars = {
+    'Personal': {},
+    'Classes': {},
+    'Clubs': {},
+    'Office Hours': {},
+  };
+
+  Map<String, bool> _calendarVisibility = {
+    'Personal': true,
+    'Classes': true,
+    'Clubs': true,
+    'Office Hours': true,
+  };
+
+  // Assignments example
+  Map<String, Map<String, dynamic>> _assignments = {
+    'Math HW1': {
+      'deadline': DateTime.now().add(Duration(days: 2, hours: 17)),
+      'estimatedHours': 3,
+    },
+    'CS Project': {
+      'deadline': DateTime.now().add(Duration(days: 5, hours: 20)),
+      'estimatedHours': 5,
+    },
+  };
+
+  // Dropdown states
+  String _selectedCalendar = 'Personal';
+  String _repeatRule = 'None';
+
+  @override
+  Widget build(BuildContext context) {
+    String selectedDateKey = _selectedDay.toIso8601String().split('T')[0];
+
+    // Combine visible events for selected day
+    List<Event> eventsForDay = [];
+    _calendars.forEach((calendarName, calendarMap) {
+      if (_calendarVisibility[calendarName] == true &&
+          calendarMap.containsKey(selectedDateKey)) {
+        eventsForDay.addAll(calendarMap[selectedDateKey]!);
+      }
+    });
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('UCSC Timeline 🐌'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.today),
+            onPressed: () {
+              setState(() {
+                _selectedDay = DateTime.now();
+                _focusedDay = DateTime.now();
+              });
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Calendar
+          TableCalendar(
+            firstDay: DateTime.utc(2020, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+            },
+            calendarFormat: _calendarFormat,
+            onFormatChanged: (format) {
+              setState(() {
+                _calendarFormat = format;
+              });
+            },
+            calendarStyle: CalendarStyle(
+              todayDecoration: BoxDecoration(
+                color: Colors.blue[700],
+                shape: BoxShape.circle,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: Colors.yellow[700],
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+
+          // Calendar visibility toggle
+          Container(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: _calendars.keys.map((name) {
+                return Row(
+                  children: [
+                    Checkbox(
+                      value: _calendarVisibility[name],
+                      onChanged: (val) {
+                        setState(() {
+                          _calendarVisibility[name] = val ?? true;
+                        });
+                      },
+                    ),
+                    Text(name),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+
+          // Event input
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _eventController,
+                        decoration: InputDecoration(
+                          labelText: 'Event Name',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _durationController,
+                        decoration: InputDecoration(
+                          labelText: 'Duration (hrs)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    DropdownButton<String>(
+                      value: _selectedCalendar,
+                      items: _calendars.keys
+                          .map((name) =>
+                              DropdownMenuItem(value: name, child: Text(name)))
+                          .toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedCalendar = val!;
+                        });
+                      },
+                    ),
+                    SizedBox(width: 8),
+                    DropdownButton<String>(
+                      value: _repeatRule,
+                      items: ['None', 'Daily', 'Weekly', 'Monthly']
+                          .map((r) =>
+                              DropdownMenuItem(value: r, child: Text(r)))
+                          .toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _repeatRule = val!;
+                        });
+                      },
+                    ),
+                    SizedBox(width: 8),
+                    ElevatedButton(
+                      child: Text('Add Event'),
+                      onPressed: () async {
+                        if (_eventController.text.isEmpty) return;
+
+                        TimeOfDay? pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+
+                        if (pickedTime == null) return;
+
+                        int durationHours =
+                            int.tryParse(_durationController.text) ?? 1;
+
+                        DateTime eventDateTime = DateTime(
+                          _selectedDay.year,
+                          _selectedDay.month,
+                          _selectedDay.day,
+                          pickedTime.hour,
+                          pickedTime.minute,
+                        );
+
+                        Event newEvent = Event(
+                          name: _eventController.text,
+                          time: eventDateTime,
+                          durationHours: durationHours,
+                          repeat: _repeatRule,
+                          calendar: _selectedCalendar,
+                        );
+
+                        addEventToCalendar(_selectedCalendar, newEvent);
+
+                        setState(() {
+                          _eventController.clear();
+                          _durationController.clear();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Timeline canvas
+          Expanded(
+            child: SingleChildScrollView(
+              child: Container(
+                height: 24 * 60.0, // 24 hours * 60 pixels
+                child: Stack(
+                  children: [
+                    // Hour lines
+                    for (int h = 0; h <= 24; h++)
+                      Positioned(
+                        top: h * 60.0,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: 1,
+                          color: Colors.grey[300],
+                        ),
+                      ),
+                    // Hour labels
+                    for (int h = 0; h <= 24; h++)
+                      Positioned(
+                        top: h * 60.0 - 6,
+                        left: 4,
+                        child: Text('${h.toString().padLeft(2, '0')}:00',
+                            style: TextStyle(fontSize: 12)),
+                      ),
+                    // Event blocks
+                    for (var e in eventsForDay)
+                      Positioned(
+                        top: e.time.hour * 60.0 + e.time.minute,
+                        left: 60,
+                        width: MediaQuery.of(context).size.width - 80,
+                        height: e.durationHours * 60.0,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.blue[300],
+                            border: Border.all(color: Colors.blue[700]!),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          padding: EdgeInsets.all(4),
+                          child: Text(
+                            e.name,
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    // Assignment blocks
+                    for (var entry in _assignments.entries)
+                      if (DateFormat('yyyy-MM-dd')
+                              .format(entry.value['deadline']) ==
+                          selectedDateKey)
+                        Positioned(
+                          top: entry.value['deadline'].hour * 60.0 +
+                              entry.value['deadline'].minute,
+                          left: 60,
+                          width: MediaQuery.of(context).size.width - 80,
+                          height: entry.value['estimatedHours'] * 60.0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.orange[400],
+                              border: Border.all(color: Colors.orange[700]!),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            padding: EdgeInsets.all(4),
+                            child: Text(
+                              '${entry.key} (Deadline)',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Add events to calendar (with repeat)
+  void addEventToCalendar(String calendar, Event event) {
+    DateTime day = DateTime(event.time.year, event.time.month, event.time.day);
+    String key = day.toIso8601String().split('T')[0];
+
+    _calendars.putIfAbsent(calendar, () => {});
+    _calendars[calendar]!.putIfAbsent(key, () => []);
+    _calendars[calendar]![key]!.add(event);
+
+    if (event.repeat != 'None') {
+      for (int i = 1; i <= 30; i++) {
+        DateTime nextDay;
+        switch (event.repeat) {
+          case 'Daily':
+            nextDay = day.add(Duration(days: i));
+            break;
+          case 'Weekly':
+            nextDay = day.add(Duration(days: i * 7));
+            break;
+          case 'Monthly':
+            nextDay = DateTime(day.year, day.month + i, day.day);
+            break;
+          default:
+            continue;
+        }
+        String nextKey = nextDay.toIso8601String().split('T')[0];
+        _calendars[calendar]!.putIfAbsent(nextKey, () => []);
+        _calendars[calendar]![nextKey]!.add(event.copyWith(
+          time: DateTime(
+              nextDay.year, nextDay.month, nextDay.day, event.time.hour, event.time.minute),
+        ));
+      }
+    }
+  }
+}
