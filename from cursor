@@ -279,3 +279,109 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Weekly Summary Section
+Padding(
+  padding: const EdgeInsets.all(8.0),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        '📆 Weekly Summary',
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF003399),
+        ),
+      ),
+      SizedBox(height: 8),
+      Builder(
+        builder: (context) {
+          DateTime now = DateTime.now();
+
+          // Determine the start and end of this week (Monday to Sunday)
+          DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+          DateTime endOfWeek = startOfWeek.add(Duration(days: 6));
+
+          // Count events per day for this week
+          Map<String, int> eventsPerDay = {};
+          _events.forEach((dateKey, eventList) {
+            DateTime date = DateTime.parse(dateKey);
+            if (date.isAfter(startOfWeek.subtract(Duration(days: 1))) &&
+                date.isBefore(endOfWeek.add(Duration(days: 1)))) {
+              eventsPerDay[dateKey] = eventList.length;
+            }
+          });
+
+          int totalEvents = eventsPerDay.values.fold(0, (a, b) => a + b);
+
+          // Find the busiest day
+          String busiestDay = 'N/A';
+          if (eventsPerDay.isNotEmpty) {
+            String maxKey = eventsPerDay.keys.first;
+            for (var k in eventsPerDay.keys) {
+              if (eventsPerDay[k]! > eventsPerDay[maxKey]!) {
+                maxKey = k;
+              }
+            }
+            busiestDay = DateFormat('EEEE').format(DateTime.parse(maxKey));
+          }
+
+          // Generate summary text
+          String summaryText = totalEvents == 0
+              ? "No events added this week. Time to plan ahead!"
+              : "You added $totalEvents events this week. "
+                "Your busiest day was $busiestDay.";
+
+          return Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.blueAccent),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(summaryText,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.blue[900],
+                    )),
+                SizedBox(height: 8),
+                if (totalEvents > 0)
+                  Wrap(
+                    spacing: 8,
+                    children: eventsPerDay.entries.map((e) {
+                      String weekday =
+                          DateFormat('E').format(DateTime.parse(e.key));
+                      return Chip(
+                        backgroundColor: Colors.blue[100],
+                        label: Text('$weekday: ${e.value}'),
+                      );
+                    }).toList(),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    ],
+  ),
+),
