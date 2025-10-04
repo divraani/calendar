@@ -205,3 +205,134 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 }
+
+
+Instructions: 
+Step 1: Make sure Flutter is installed and on PATH
+
+Open a terminal in VS Code (Ctrl + on Windows or Cmd + on Mac`).
+
+Run:
+
+flutter --version
+
+
+You should see Flutter version info.
+
+If it says command not found, make sure Flutter’s bin folder is added to your system PATH (you can follow the Flutter installation guide
+).
+
+Step 2: Install Flutter & Dart extensions in VS Code
+
+Open VS Code → Extensions (Cmd+Shift+X / Ctrl+Shift+X)
+
+Search for:
+
+Flutter
+
+Dart
+
+Click Install for both.
+
+Step 3: Create a new Flutter project
+
+Open the VS Code Command Palette (Cmd+Shift+P / Ctrl+Shift+P) → type Flutter: New Project → select it.
+
+Name your project (e.g., my_calendar_app) and pick a folder.
+
+VS Code will generate a starter Flutter project with the default main.dart.
+
+Alternatively, in terminal:
+
+flutter create my_calendar_app
+cd my_calendar_app
+code .
+
+Step 4: Replace main.dart
+
+Navigate to lib/main.dart in your new Flutter project.
+
+Delete all existing code and paste the full code I gave you.
+
+Save the file (Cmd+S / Ctrl+S).
+
+Step 5: Run the app
+
+Make sure you have a device connected:
+
+Physical phone via USB (with developer mode enabled)
+
+Emulator / Simulator: open from Android Studio AVD or iOS Simulator
+
+In VS Code:
+
+At the bottom-right, select your device/emulator.
+
+Press F5 or click Run → Start Debugging.
+
+VS Code will build the Flutter app and launch it on your device/emulator. You should see your UCSC-themed calendar with event input and upcoming deadlines.
+
+Step 6: Hot reload while editing
+
+Make changes in main.dart → press r in terminal or the Hot Reload button in VS Code.
+
+Your app updates instantly without restarting.
+
+Step 7: Optional improvements
+
+Add more assignments/events to see the horizontal Canvas scroll
+
+Adjust colors, fonts, or layout for UCSC theme
+
+
+Error correction:
+Ah! That error is expected when Flutter can’t find the packages you imported (table_calendar and intl). You haven’t added them to your project yet. Flutter doesn’t automatically include external packages—you need to install them via pubspec.yaml.
+
+Here’s how to fix it:
+
+Step 1: Open pubspec.yaml
+
+In VS Code, open the file at the root of your Flutter project: pubspec.yaml.
+
+Step 2: Add dependencies
+
+Find the section called dependencies: and add these lines under it (make sure it’s indented correctly—2 spaces):
+
+dependencies:
+  flutter:
+    sdk: flutter
+  table_calendar: ^3.0.9
+  intl: ^0.18.1
+
+
+Versions may vary; these are the latest as of now.
+
+Make sure it looks like this with proper indentation:
+
+dependencies:
+  flutter:
+    sdk: flutter
+  table_calendar: ^3.0.9
+  intl: ^0.18.1
+
+Step 3: Install packages
+
+Open a terminal in VS Code.
+
+Run:
+
+flutter pub get
+
+
+This downloads table_calendar and intl into your project.
+
+Step 4: Re-run your app
+
+Press F5 in VS Code or run:
+
+flutter run
+
+
+The errors about table_calendar and intl should disappear.
+
+✅ Tip: Always run flutter pub get whenever you add a new package to pubspec.yaml.
